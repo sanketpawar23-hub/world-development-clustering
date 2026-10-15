@@ -167,9 +167,23 @@ def radar(percentiles, labels_to_series, colors, title):
 # ----------------------------------------------------------------------------
 # Data loading + model (cached)
 # ----------------------------------------------------------------------------
+def find_sample_file():
+    """Look for the sample data in the 'data' folder, then next to app.py (any .xlsx/.csv)."""
+    for folder in [BASE / "data", BASE]:
+        if folder.exists():
+            for pattern in ("*.xlsx", "*.xls", "*.csv"):
+                matches = sorted(folder.glob(pattern))
+                if matches:
+                    return matches[0]
+    return None
+
+
 @st.cache_data(show_spinner=False)
 def load_sample():
-    return pl.load_raw(SAMPLE_PATH)
+    path = find_sample_file()
+    if path is None:
+        return None
+    return pl.load_raw(path)
 
 
 @st.cache_data(show_spinner=False)
@@ -206,6 +220,13 @@ if source == "Upload my own file":
         st.sidebar.info("No valid file yet - showing the sample dataset.")
 if raw_data is None:
     raw_data = load_sample()
+if raw_data is None:
+    st.error(
+        "Sample data file not found in the repository. Either add the Excel file "
+        "(World_development_mesurement.xlsx) next to app.py or inside a 'data' folder on GitHub, "
+        "or choose 'Upload my own file' in the sidebar."
+    )
+    st.stop()
 
 algorithm = st.sidebar.selectbox("Algorithm", pl.ALGORITHMS, index=0)
 n_clusters = st.sidebar.slider("Number of clusters", 2, 8, 4)
